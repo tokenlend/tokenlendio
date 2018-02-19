@@ -48,7 +48,7 @@ contract ContributionWallet {
     function ContributionWallet(address _multisig, uint256 _endBlock, address _contribution) public {
         require(_multisig != 0x0);
         require(_contribution != 0x0);
-        require(_endBlock != 0 && _endBlock <= 4000000);
+        require(_endBlock != 0);
         multisig = _multisig;
         endBlock = _endBlock;
         contribution = TLNContribution(_contribution);
