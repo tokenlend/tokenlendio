@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
 /*
-    Copyright (c) 2017 Disc Soft Ltd.
+    Copyright (c) 2018 Disc Soft Ltd.
     https://tokenlend.io/
 
     This program is free software: you can redistribute it and/or modify

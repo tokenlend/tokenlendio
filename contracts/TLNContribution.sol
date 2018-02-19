@@ -2,6 +2,7 @@ pragma solidity ^0.4.18;
 
 /*
     Copyright 2017, Jordi Baylina
+    Copyright 2018, Disc Soft Ltd.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
