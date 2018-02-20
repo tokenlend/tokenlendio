@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.19;
 
 /*
     Copyright (c) 2018 Disc Soft Ltd.
