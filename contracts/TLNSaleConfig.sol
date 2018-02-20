@@ -38,8 +38,8 @@ contract TLNSaleConfig {
     }
 
     uint256 constant public TLN_SOFT_CAP = 5000 ether;
-    uint256 constant public TLN_HARD_CAP = 30000 ether;
-    uint256 constant public TLN_HARD_CAP_PRESALE = 2750 ether;
+    uint256 constant public TLN_HARD_CAP = 41000 ether;
+    uint256 constant public TLN_HARD_CAP_PRESALE = 3500 ether;
 
     /// 2500 TLN per ETH
     uint256 constant public TLN_EXCHANGE_RATE = 2500;
@@ -47,13 +47,13 @@ contract TLNSaleConfig {
     uint256 constant public TLN_MAX_GAS_PRICE = 50000000000;
     uint256 constant public TLN_MAX_CALL_FREQUENCY = 100;
 
-    uint256 constant public TLN_BONUS_1_CAP = 3000 ether;
+    uint256 constant public TLN_BONUS_1_CAP = 1000 ether;
     uint256 constant public TLN_BONUS_1 = 10;
-    uint256 constant public TLN_BONUS_2_CAP = 9000 ether;
+    uint256 constant public TLN_BONUS_2_CAP = 3000 ether;
     uint256 constant public TLN_BONUS_2 = 7;
-    uint256 constant public TLN_BONUS_3_CAP = 21000 ether;
+    uint256 constant public TLN_BONUS_3_CAP = 9000 ether;
     uint256 constant public TLN_BONUS_3 = 5;
-    uint256 constant public TLN_BONUS_4_CAP = 45000 ether;
+    uint256 constant public TLN_BONUS_4_CAP = 21000 ether;
     uint256 constant public TLN_BONUS_4 = 3;
 
     uint256 constant public TLN_BONUS_PRESALE = 20;
