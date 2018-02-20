@@ -37,9 +37,9 @@ contract TLNSaleConfig {
        ICOFinished
     }
 
-    uint256 constant public TLN_SOFT_CAP = 20000 ether;
-    uint256 constant public TLN_HARD_CAP = 140000 ether;
-    uint256 constant public TLN_HARD_CAP_PRESALE = 11047 ether;
+    uint256 constant public TLN_SOFT_CAP = 5000 ether;
+    uint256 constant public TLN_HARD_CAP = 30000 ether;
+    uint256 constant public TLN_HARD_CAP_PRESALE = 2750 ether;
 
     /// 2500 TLN per ETH
     uint256 constant public TLN_EXCHANGE_RATE = 2500;
