@@ -279,6 +279,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
         assert(msg.value >= _toFund);  // Not needed, but double check.
         assert(totalCollected() <= getHardCap());
 
+        // important: totalCollected() = "collected + toFund"
         uint256 collected = totalCollected();
         uint256 totCollected = collected;
         collected = collected.sub(_toFund);
@@ -293,7 +294,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
             if (bonusStage == BonusStage.Stage1)
             {
-                if (collected.add(_toFund) < getBonus1Cap())
+                if (totCollected <= getBonus1Cap())
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus1()));
@@ -311,7 +312,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
             } 
             else if (bonusStage == BonusStage.Stage2) 
             {
-                if (collected.add(_toFund) < getBonus2Cap()) 
+                if (totCollected <= getBonus2Cap()) 
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus2()));
@@ -329,7 +330,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
             }
             else if (bonusStage == BonusStage.Stage3) 
             {
-                if (collected.add(_toFund) < getBonus3Cap()) 
+                if (totCollected <= getBonus3Cap()) 
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus3()));
@@ -347,7 +348,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
             } 
             else if (bonusStage == BonusStage.Stage4) 
             {
-                if (collected.add(_toFund) < getBonus4Cap()) 
+                if (totCollected <= getBonus4Cap()) 
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus4()));
