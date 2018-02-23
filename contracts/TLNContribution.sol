@@ -156,6 +156,8 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
         totalInitialInvestorsCollected = 0;
         totalPresaleCollected = 0;
         totalNormalCollected = 0;
+
+        currentState = IcoState.Init;
     }
 
     /// @notice If anybody sends Ether directly to this contract, consider he is
@@ -415,10 +417,10 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
             require(totalNormalCollected >= getSoftCap());
         }
 
-        setState(IcoState.ICOFinished);
-
         finalizedBlock = getBlockNumber();
         finalizedTime = now;
+
+        currentState = IcoState.ICOFinished;
 
         uint256 percentageToContributors = percent(75);
         uint256 percentageToTeam = percent(14);
