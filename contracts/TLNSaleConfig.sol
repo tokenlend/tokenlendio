@@ -45,7 +45,7 @@ contract TLNSaleConfig {
     uint256 constant public TLN_EXCHANGE_RATE = 2500;
 
     uint256 constant public TLN_MAX_GAS_PRICE = 50000000000;
-    uint256 constant public TLN_MAX_CALL_FREQUENCY = 100;
+    uint256 constant public TLN_MAX_CALL_FREQUENCY = 20;
 
     uint256 constant public TLN_BONUS_1_CAP = 1000 ether;
     uint256 constant public TLN_BONUS_1 = 10;
