@@ -60,9 +60,17 @@ contract ContributionWallet {
     // @dev Withdraw function sends all the funds to the wallet if conditions are correct
     function withdraw() public {
         require(msg.sender == multisig);              // Only the multisig can request it
-        require(block.number > endBlock ||            // Allow after end block
+        require(getBlockNumber() > endBlock ||            // Allow after end block
                 contribution.finalizedBlock() != 0);  // Allow when sale is finalized
         multisig.transfer(this.balance);
     }
 
+    //////////
+    // Testing specific methods
+    //////////
+
+    /// @notice This function is overridden by the test Mocks.
+    function getBlockNumber() internal constant returns (uint256) {
+        return block.number;
+    }
 }
