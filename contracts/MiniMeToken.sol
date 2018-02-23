@@ -162,7 +162,7 @@ contract MiniMeToken is Controlled {
         parentToken = MiniMeToken(_parentToken);
         parentSnapShotBlock = _parentSnapShotBlock;
         transfersEnabled = _transfersEnabled;
-        creationBlock = block.number;
+        creationBlock = getBlockNumber();
     }
 
 
@@ -226,14 +226,14 @@ contract MiniMeToken is Controlled {
                return;
            }
 
-           require(parentSnapShotBlock < block.number);
+           require(parentSnapShotBlock < getBlockNumber());
 
            // Do not allow transfer to 0x0 or the token contract itself
            require((_to != 0) && (_to != address(this)));
 
            // If the amount being transfered is more than the balance of the
            //  account the transfer throws
-           var previousBalanceFrom = balanceOfAt(_from, block.number);
+           var previousBalanceFrom = balanceOfAt(_from, getBlockNumber());
 
            require(previousBalanceFrom >= _amount);
 
@@ -248,7 +248,7 @@ contract MiniMeToken is Controlled {
 
            // Then update the balance array with the new value for the address
            //  receiving the tokens
-           var previousBalanceTo = balanceOfAt(_to, block.number);
+           var previousBalanceTo = balanceOfAt(_to, getBlockNumber());
            require(previousBalanceTo + _amount >= previousBalanceTo); // Check for overflow
            updateValueAtNow(balances[_to], previousBalanceTo + _amount);
 
@@ -260,7 +260,7 @@ contract MiniMeToken is Controlled {
     /// @param _owner The address that's balance is being requested
     /// @return The balance of `_owner` at the current block
     function balanceOf(address _owner) public constant returns (uint256 balance) {
-        return balanceOfAt(_owner, block.number);
+        return balanceOfAt(_owner, getBlockNumber());
     }
 
     /// @notice `msg.sender` approves `_spender` to spend `_amount` tokens on
@@ -322,7 +322,7 @@ contract MiniMeToken is Controlled {
     /// @dev This function makes it easy to get the total number of tokens
     /// @return The total number of tokens
     function totalSupply() public constant returns (uint256) {
-        return totalSupplyAt(block.number);
+        return totalSupplyAt(getBlockNumber());
     }
 
 
@@ -402,7 +402,7 @@ contract MiniMeToken is Controlled {
         uint _snapshotBlock,
         bool _transfersEnabled
         ) public returns(address) {
-        if (_snapshotBlock == 0) _snapshotBlock = block.number;
+        if (_snapshotBlock == 0) _snapshotBlock = getBlockNumber();
         MiniMeToken cloneToken = tokenFactory.createCloneToken(
             this,
             _snapshotBlock,
@@ -505,9 +505,9 @@ contract MiniMeToken is Controlled {
     function updateValueAtNow(Checkpoint[] storage checkpoints, uint256 _value
     ) internal  {
         if ((checkpoints.length == 0)
-        || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
+        || (checkpoints[checkpoints.length -1].fromBlock < getBlockNumber())) {
                Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
-               newCheckPoint.fromBlock =  uint128(block.number);
+               newCheckPoint.fromBlock =  uint128(getBlockNumber());
                newCheckPoint.value = _value;
            } else {
                Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
@@ -558,6 +558,15 @@ contract MiniMeToken is Controlled {
         uint256 balance = token.balanceOf(this);
         token.transfer(controller, balance);
         ClaimedTokens(_token, controller, balance);
+    }
+
+//////////
+// Testing specific methods
+//////////
+
+    /// @notice This function is overridden by the test Mocks.
+    function getBlockNumber() internal constant returns (uint256) {
+        return block.number;
     }
 
 ////////////////
