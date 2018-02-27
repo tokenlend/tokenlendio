@@ -429,14 +429,9 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
         uint256 percentageToBounties = percent(1);
         uint256 percentageToPreSale = percent(7);
 
-        // TLN.totalSupply() -> Tokens minted during the contribution and presale
-        //  totalTokens  -> Total tokens that should be after the allocation of devTokens, advisoryTokens, bountiesTokens
-        //  percentageToContributors -> Which percentage should go to the contribution participants (x per 10**18 format)
-        //  percent(100) -> 100% in (x per 10**18 format)
-        //  TLN.totalSupply() = ((percentageToContributors + percentageToPreSale) / percent(100)) * totalTokens  =>
-        //  =>  totalTokens = (percent(100) / (percentageToContributors + percentageToPreSale)) * TLN.totalSupply()
-
-        uint256 totalTokens = TLN.totalSupply().mul(percent(100)).div(percentageToContributors + percentageToPreSale);
+        uint256 totalTokens = totalCollected().mul(getExchangeRate())
+                                              .mul(percent(100))
+                                              .div(percentageToContributors + percentageToPreSale);
 
         if (totalTokens > 0) {
             //  bountiesTokens = percentageToBounties / percentage(100) * totalTokens

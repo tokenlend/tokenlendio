@@ -102,10 +102,10 @@ contract('TlnContribution', (accounts) => {
 
         it('check deploy cost', async () => {
             const balanceAfter = helper.getBalance(owner);
-            const deployCostInETH = helper.logContractCallCost(
+            const deployCostInEth = helper.logContractCallCost(
                 balanceBefore, balanceAfter, 'Deploy cost'
             );
-            assert.isBelow(deployCostInETH, 0.05);
+            assert.isBelow(deployCostInEth, 0.05);
         });
 
         it('check initial parameters', async () => {
@@ -906,9 +906,19 @@ contract('TlnContribution', (accounts) => {
         });
 
         it('should allow to finalize before end block when soft cap was reached', async () => {
+            const baseTokens = web3.toBigNumber(web3.toWei(2500));
+            const bonusTokens = web3.toWei(500);
+
+            await tlnContribution.addInitialInvestor(
+                investor1, baseTokens, bonusTokens
+            );
+
             await tlnContribution.setMockedBlockNumber(startBlockPresale);
             await tlnContribution.startPresale();
-            assert.ok(await tln.sendTransaction({ value: presaleMaxAmount, from: investor5, gasPrice: 0 }));
+            assert.ok(await tln.sendTransaction({
+                value: web3.toBigNumber(presaleMaxAmount).sub(web3.toWei(1)),
+                from: investor5, gasPrice: 0
+            }));
 
             await tlnContribution.setState(4);
             await tlnContribution.setMockedBlockNumber(endBlockIco - 1);
@@ -922,25 +932,22 @@ contract('TlnContribution', (accounts) => {
             assert.equal((await tlnContribution.currentState.call()).toNumber(), 5);
 
             const balanceAfter = helper.getBalance(owner);
-            const finalizationCostInETH = helper.logContractCallCost(
+            const finalizationCostInEth = helper.logContractCallCost(
                 balanceBefore, balanceAfter, 'Finalization cost'
             );
-            assert.isBelow(finalizationCostInETH, 0.001);
+            assert.isBelow(finalizationCostInEth, 0.001);
 
-            const totalTln = web3.toBigNumber(presaleMaxAmount).mul(1.2)
-                                 .plus(web3.toBigNumber(web3.toWei(1000)).mul(1.1))
-                                 .plus(web3.toBigNumber(web3.toWei(500)).mul(1.07))
-                                 .div(0.82);
+            const totalEth = web3.toBigNumber(presaleMaxAmount).plus(amount).div(0.82);
 
-            const expectedTeamTln = helper.toTln(totalTln.mul(0.14));
+            const expectedTeamTln = helper.toTln(totalEth.mul(0.14));
             const actualTeamTln = await helper.getTlnByContractAndAccount(tln, teamTokensHolder.address);
             assert.equal(actualTeamTln.toNumber(), expectedTeamTln.toNumber(), 'team');
 
-            const expectedAdvisorsTln = helper.toTln(totalTln.mul(0.03));
+            const expectedAdvisorsTln = helper.toTln(totalEth.mul(0.03));
             const actualAdvisorsTln = await helper.getTlnByContractAndAccount(tln, advisorsTokensHolder.address);
             assert.equal(actualAdvisorsTln.toNumber(), expectedAdvisorsTln.toNumber(), 'advisors');
 
-            const expectedBountiesTln = helper.toTln(totalTln.mul(0.01));
+            const expectedBountiesTln = helper.toTln(totalEth.mul(0.01));
             const actualBountiesTln = await helper.getTlnByContractAndAccount(tln, multisigBounties.address);
             assert.equal(actualBountiesTln.toNumber(), expectedBountiesTln.toNumber(), 'bounties');
         });
@@ -954,10 +961,10 @@ contract('TlnContribution', (accounts) => {
             assert.equal((await tlnContribution.currentState.call()).toNumber(), 5);
 
             const balanceAfter = helper.getBalance(investor5);
-            const finalizationCostInETH = helper.logContractCallCost(
+            const finalizationCostInEth = helper.logContractCallCost(
                 balanceBefore, balanceAfter, 'Finalization cost'
             );
-            assert.isBelow(finalizationCostInETH, 0.001);
+            assert.isBelow(finalizationCostInEth, 0.001);
 
             assert.equal(await tln.totalSupply(), 0);
 
@@ -1014,7 +1021,7 @@ contract('TlnContribution', (accounts) => {
     });
 
     describe('Transfers', () => {
-        let totalTln;
+        let totalEth;
         let currentTime
 
         beforeEach(async () => {
@@ -1027,7 +1034,7 @@ contract('TlnContribution', (accounts) => {
             await tlnContribution.setMockedBlockNumber(endBlockIco + 1);
             await tlnContribution.finalize();
 
-            totalTln = web3.toBigNumber(presaleMaxAmount).mul(1.2).div(0.82);
+            totalEth = web3.toBigNumber(presaleMaxAmount).div(0.82);
             currentTime = Math.floor(new Date().getTime() / 1000);
         });
 
@@ -1093,7 +1100,7 @@ contract('TlnContribution', (accounts) => {
                 { from: accountTeam1, gasPrice: 0 }
             );
 
-            const expectedTeamTln = helper.toTln(totalTln.mul(0.14).div(2));
+            const expectedTeamTln = helper.toTln(totalEth.mul(0.14).div(2));
             const actualTeamTln = await helper.getTlnByContractAndAccount(tln, multisigTeam.address);
             assert.equal(actualTeamTln.toNumber(), expectedTeamTln.toNumber());
 
@@ -1115,7 +1122,7 @@ contract('TlnContribution', (accounts) => {
                 { from: accountTeam1, gasPrice: 0 }
             );
 
-            const expectedTeamTln = helper.toTln(totalTln.mul(0.14));
+            const expectedTeamTln = helper.toTln(totalEth.mul(0.14));
             const actualTeamTln = await helper.getTlnByContractAndAccount(tln, multisigTeam.address);
             assert.equal(actualTeamTln.toNumber(), expectedTeamTln.toNumber());
 
@@ -1153,7 +1160,7 @@ contract('TlnContribution', (accounts) => {
                 { from: accountAdvisors, gasPrice: 0 }
             );
 
-            const expectedAdvisorsTln = helper.toTln(totalTln.mul(0.03));
+            const expectedAdvisorsTln = helper.toTln(totalEth.mul(0.03));
             const actualAdvisorsTln = await helper.getTlnByContractAndAccount(
                 tln, multisigAdvisors.address
             );
