@@ -21,7 +21,7 @@ pragma solidity 0.4.19;
 /// @title DevTokensHolder Contract
 /// Based on Jordi Baylina
 /// @dev This contract will hold the tokens of the developers.
-///  50% of tokens will be locked* for a 24 month period, and 
+///  50% of tokens will be locked* for a 24 month period, and
 ///  the remaining 50% will be locked* for 48 months.
 
 

@@ -8,16 +8,16 @@ contract AdvisoryTokensHolderMock is AdvisoryTokensHolder {
 
     function AdvisoryTokensHolderMock(address _owner, address _contribution, address _tln) public
     AdvisoryTokensHolder(_owner, _contribution, _tln) {
-        mock_date = now;
+        mock_time = now;
     }
 
     function getTime() internal view returns (uint256) {
-        return mock_date;
+        return mock_time;
     }
 
-    function setMockedDate(uint256 date) public {
-        mock_date = date;
+    function setMockedTime(uint256 _t) public {
+        mock_time = _t;
     }
 
-    uint256 mock_date = now;
+    uint256 mock_time;
 }

@@ -53,14 +53,12 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
     uint256 public totalInitialInvestorsCollected;
     uint256 public totalPresaleCollected;
-    uint256 public totalNormalCollected;
+    uint256 public totalIcoCollected;
 
     uint256 public finalizedBlock;
     uint256 public finalizedTime;
 
     mapping (address => uint256) public lastCallBlock;
-
-    bool public paused;
 
     IcoState public currentState = IcoState.Init;
 
@@ -70,28 +68,24 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
     }
 
     modifier saleOpen() {
-        require(((getBlockNumber() >= startBlock && getBlockNumber() <= endBlock) ||
-                 (getBlockNumber() >= startBlockPresale && getBlockNumber() <= endBlockPresale)
-                ) &&
-                finalizedBlock == 0 &&
-                address(TLN) != 0x0);
+        require(
+            ((getBlockNumber() >= startBlock && getBlockNumber() <= endBlock && currentState == IcoState.ICORunning) ||
+             (getBlockNumber() >= startBlockPresale && getBlockNumber() <= endBlockPresale && currentState == IcoState.PresaleRunning)
+            ) && finalizedBlock == 0 && address(TLN) != 0x0
+        );
+
         _;
     }
 
     modifier notPaused() {
-        require(!paused);
+        require(currentState != IcoState.Paused);
         _;
     }
 
     modifier requiresState(IcoState state) {
-        require(state == currentState); 
-        _; 
+        require(state == currentState);
+        _;
     }
-
-    function TLNContribution() public {
-        paused = false;
-    }
-
 
     /// @notice This method should be called by the owner before the contribution
     ///  period starts This initializes most of the parameters
@@ -155,7 +149,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
         totalInitialInvestorsCollected = 0;
         totalPresaleCollected = 0;
-        totalNormalCollected = 0;
+        totalIcoCollected = 0;
 
         currentState = IcoState.Init;
     }
@@ -177,11 +171,13 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
     /// @param _th TLN holder where the TLNs will be minted.
     function proxyPayment(address _th) public payable notPaused initialized saleOpen returns (bool) {
         require(_th != 0x0);
-        require(currentState == IcoState.PresaleRunning || currentState == IcoState.ICORunning);
 
-        if(currentState == IcoState.PresaleRunning) {
+        if (currentState == IcoState.PresaleRunning) {
             // min - 1 ETH
             require(msg.value >= 1 ether);
+        } else {
+            // max - 2000 ETH
+            require(msg.value <= 2000 ether);
         }
 
         // call internal function "buyTokens"
@@ -217,11 +213,13 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
         // check "hardcap - already collected"
         uint256 toCollect;
-        if(currentState == IcoState.PresaleRunning) {
+        if (currentState == IcoState.PresaleRunning) {
             toCollect = getHardCapPresale() - (totalCollectedPresale() + totalCollectedInitialInvestors());
         } else if(currentState == IcoState.ICORunning){
             toCollect = getHardCap() - totalCollected();
         }
+
+        require(toCollect > 0);
 
         // check amount
         uint256 toFund;
@@ -237,17 +235,18 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
             // call internal function "doBuyPresale"
             doBuyPresale(_th, toFund);
         } else if(currentState == IcoState.ICORunning){
-            totalNormalCollected = totalNormalCollected.add(toFund);
+            totalIcoCollected = totalIcoCollected.add(toFund);
             // call internal function "doBuy"
             doBuy(_th, toFund);
         }
     }
 
     // internal
-    function doBuyPresale(address _th, uint256 _toFund) internal 
+    function doBuyPresale(address _th, uint256 _toFund) internal
     {
         assert(msg.value >= _toFund);  // Not needed, but double check.
-        assert((totalCollectedPresale() + totalCollectedInitialInvestors()) <= getHardCapPresale());
+        uint256 totalCollected = totalCollectedPresale() + totalCollectedInitialInvestors();
+        assert(totalCollected <= getHardCapPresale());
 
         require(msg.value >= 1 ether); // double check
 
@@ -260,6 +259,10 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
             destEthTeam.transfer(_toFund);
 
             NewPresale(_th, _toFund, tokensGenerated);
+            if (totalCollected == getHardCapPresale()) {
+                currentState = IcoState.PresaleFinished;
+                StateChanged(currentState);
+            }
         }
 
         uint256 toReturn = msg.value.sub(_toFund);
@@ -276,17 +279,15 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
     }
 
     // internal
-    function doBuy(address _th, uint256 _toFund) internal 
+    function doBuy(address _th, uint256 _toFund) internal
     {
         assert(msg.value >= _toFund);  // Not needed, but double check.
         assert(totalCollected() <= getHardCap());
 
-        // important: totalCollected() = "collected + toFund"
-        uint256 collected = totalCollected();
-        uint256 totCollected = collected;
-        collected = collected.sub(_toFund);
+        // important: totalIcoCollected = "collected + toFund"
+        uint256 collected = totalIcoCollected.sub(_toFund);
 
-        if (_toFund > 0) 
+        if (_toFund > 0)
         {
             uint256 tokensGenerated = _toFund.mul(getExchangeRate());
             uint256 tokensToBonusCap = 0;
@@ -296,66 +297,66 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
             if (bonusStage == BonusStage.Stage1)
             {
-                if (totCollected <= getBonus1Cap())
+                if (totalIcoCollected <= getBonus1Cap())
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus1()));
-                } 
-                else 
+                }
+                else
                 {
                     // Calc some tokens for bonus1 stage
                     bonusTokens = getBonus1Cap().sub(collected).percent(getBonus1()).mul(getExchangeRate());
                     tokensToBonusCap = tokensGenerated.add(bonusTokens);
                     // Calc some tokens for bonus2 stage
-                    tokensToNextBonusCap = totCollected.sub(getBonus1Cap()).percent(getBonus2()).mul(getExchangeRate());
+                    tokensToNextBonusCap = totalIcoCollected.sub(getBonus1Cap()).percent(getBonus2()).mul(getExchangeRate());
                     // Total tokens = tokensGenerated + tokensToBonusCap + tokensToNextBonusCap
                     tokensGenerated = tokensToBonusCap.add(tokensToNextBonusCap);
                 }
-            } 
-            else if (bonusStage == BonusStage.Stage2) 
+            }
+            else if (bonusStage == BonusStage.Stage2)
             {
-                if (totCollected <= getBonus2Cap()) 
+                if (totalIcoCollected <= getBonus2Cap())
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus2()));
                 }
-                else 
+                else
                 {
                     // Calc some tokens for bonus2 stage
                     bonusTokens = getBonus2Cap().sub(collected).percent(getBonus2()).mul(getExchangeRate());
                     tokensToBonusCap = tokensGenerated.add(bonusTokens);
                     // Calc some tokens for bonus3 stage
-                    tokensToNextBonusCap = totCollected.sub(getBonus2Cap()).percent(getBonus3()).mul(getExchangeRate());
+                    tokensToNextBonusCap = totalIcoCollected.sub(getBonus2Cap()).percent(getBonus3()).mul(getExchangeRate());
                     // Total tokens = tokensGenerated + tokensToBonusCap + tokensToNextBonusCap
                     tokensGenerated = tokensToBonusCap.add(tokensToNextBonusCap);
                 }
             }
-            else if (bonusStage == BonusStage.Stage3) 
+            else if (bonusStage == BonusStage.Stage3)
             {
-                if (totCollected <= getBonus3Cap()) 
+                if (totalIcoCollected <= getBonus3Cap())
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus3()));
-                } 
-                else 
+                }
+                else
                 {
                     // Calc some tokens for bonus3 stage
                     bonusTokens = getBonus3Cap().sub(collected).percent(getBonus3()).mul(getExchangeRate());
                     tokensToBonusCap = tokensGenerated.add(bonusTokens);
                     // Calc some tokens for bonus4 stage
-                    tokensToNextBonusCap = totCollected.sub(getBonus3Cap()).percent(getBonus4()).mul(getExchangeRate());
+                    tokensToNextBonusCap = totalIcoCollected.sub(getBonus3Cap()).percent(getBonus4()).mul(getExchangeRate());
                     // Total tokens = tokensGenerated + tokensToBonusCap + tokensToNextBonusCap
                     tokensGenerated = tokensToBonusCap.add(tokensToNextBonusCap);
                 }
-            } 
-            else if (bonusStage == BonusStage.Stage4) 
+            }
+            else if (bonusStage == BonusStage.Stage4)
             {
-                if (totCollected <= getBonus4Cap()) 
+                if (totalIcoCollected <= getBonus4Cap())
                 {
                     // Total tokens = tokensGenerated + bonuses
                     tokensGenerated = tokensGenerated.add(tokensGenerated.percent(getBonus4()));
                 }
-                else 
+                else
                 {
                     // Calc some tokens for bonus4 stage
                     bonusTokens = getBonus4Cap().sub(collected).percent(getBonus4()).mul(getExchangeRate());
@@ -371,16 +372,16 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
         }
 
         uint256 toReturn = msg.value.sub(_toFund);
-        if (toReturn > 0) 
+        if (toReturn > 0)
         {
             // If the call comes from the Token controller,
             // then we return it to the token Holder.
             // Otherwise we return to the sender.
-            if (msg.sender == address(TLN)) 
+            if (msg.sender == address(TLN))
             {
                 _th.transfer(toReturn);
-            } 
-            else 
+            }
+            else
             {
                 msg.sender.transfer(toReturn);
             }
@@ -414,7 +415,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
         // Allow premature finalization if final limit is reached
         if (getBlockNumber() <= endBlock) {
-            require(totalNormalCollected >= getSoftCap());
+            require(totalCollected() >= getSoftCap());
         }
 
         finalizedBlock = getBlockNumber();
@@ -437,24 +438,23 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
         uint256 totalTokens = TLN.totalSupply().mul(percent(100)).div(percentageToContributors + percentageToPreSale);
 
+        if (totalTokens > 0) {
+            //  bountiesTokens = percentageToBounties / percentage(100) * totalTokens
+            assert(TLN.generateTokens(
+                destTokensBounties,
+                totalTokens.mul(percentageToBounties).div(percent(100))));
 
-        //  bountiesTokens = percentageToBounties / percentage(100) * totalTokens
+            //  advisoryTokens = percentageToAdvisory / percentage(100) * totalTokens
+            assert(TLN.generateTokens(
+                destTokensAdvisory,
+                totalTokens.mul(percentageToAdvisory).div(percent(100))));
 
-        assert(TLN.generateTokens(
-            destTokensBounties,
-            totalTokens.mul(percentageToBounties).div(percent(100))));
+            //  teamTokens = percentageToTeam / percentage(100) * totalTokens
+            assert(TLN.generateTokens(
+                destTokensTeam,
+                totalTokens.mul(percentageToTeam).div(percent(100))));
 
-        //  advisoryTokens = percentageToAdvisory / percentage(100) * totalTokens
-
-        assert(TLN.generateTokens(
-            destTokensAdvisory,
-            totalTokens.mul(percentageToAdvisory).div(percent(100))));
-
-        //  teamTokens = percentageToTeam / percentage(100) * totalTokens
-
-        assert(TLN.generateTokens(
-            destTokensTeam,
-            totalTokens.mul(percentageToTeam).div(percent(100))));
+        }
 
         TLN.changeController(tlnController);
 
@@ -503,22 +503,26 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
     //////////
 
     /// @return Total tokens issued in weis.
-    function tokensIssued() public constant returns (uint256) {
+    function tokensIssued() public view returns (uint256) {
         return TLN.totalSupply();
     }
 
     /// @return Total Ether collected.
-    function totalCollected() public constant returns (uint256) {
-        return totalNormalCollected;
+    function totalCollected() public view returns (uint256) {
+        return totalIcoCollected + totalPresaleCollected + totalInitialInvestorsCollected;
+    }
+
+    function totalCollectedIco() public view returns (uint256) {
+        return totalIcoCollected;
     }
 
     /// @return Total presale Ether collected.
-    function totalCollectedPresale() public constant returns (uint256) {
+    function totalCollectedPresale() public view returns (uint256) {
         return totalPresaleCollected;
     }
 
     /// @return Total collected before presale
-    function totalCollectedInitialInvestors() public constant returns (uint256) {
+    function totalCollectedInitialInvestors() public view returns (uint256) {
         return totalInitialInvestorsCollected;
     }
 
@@ -527,7 +531,7 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
     //////////
 
     /// @notice This function is overridden by the test Mocks.
-    function getBlockNumber() internal constant returns (uint256) {
+    function getBlockNumber() internal view returns (uint256) {
         return block.number;
     }
 
@@ -554,28 +558,23 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
         ClaimedTokens(_token, owner, balance);
     }
 
-
     /// @notice Pauses the contribution if there is any issue
     function pauseContribution() public onlyOwner requiresState(IcoState.ICORunning) {
-        paused = true;
         setState(IcoState.Paused);
     }
 
     /// @notice Resumes the contribution
     function resumeContribution() public onlyOwner requiresState(IcoState.Paused) {
-        paused = false;
         setState(IcoState.ICORunning);
     }
 
     /// @notice Pauses the contribution if there is any issue
     function pausePresale() public onlyOwner requiresState (IcoState.PresaleRunning) {
-        paused = true;
         setState(IcoState.Paused);
     }
 
     /// @notice Resumes the contribution
     function resumePresale() public onlyOwner requiresState (IcoState.Paused) {
-        paused = false;
         setState(IcoState.PresaleRunning);
     }
 
@@ -586,19 +585,23 @@ contract TLNContribution is Owned, TokenController, TLNSaleConfig, Bonuses {
 
         assert(currentState != _nextState);
 
-        /*
         if (currentState == IcoState.Init) {
-            assert(_nextState == IcoState.PresaleRunning); 
+            assert(_nextState == IcoState.PresaleRunning);
         } else if (currentState == IcoState.PresaleRunning) {
-            assert(_nextState == IcoState.PresaleFinished || _nextState == IcoState.Paused); 
+            assert(_nextState == IcoState.PresaleFinished || _nextState == IcoState.Paused);
         } else if (currentState == IcoState.PresaleFinished) {
             assert(_nextState == IcoState.ICORunning);
-        } else if (currentState == IcoState.ICORunning) { 
-            assert(_nextState == IcoState.ICOFinished || _nextState == IcoState.Paused); 
-        } else if (currentState == IcoState.Paused) { 
-            assert(_nextState == IcoState.ICORunning || _nextState == IcoState.PresaleRunning); 
-        } else assert(false);
-        */
+        } else if (currentState == IcoState.ICORunning) {
+            assert(_nextState == IcoState.ICOFinished || _nextState == IcoState.Paused);
+        } else if (currentState == IcoState.Paused) {
+            if (getBlockNumber() < startBlock) {
+                assert(_nextState == IcoState.PresaleRunning);
+            } else {
+                assert(_nextState == IcoState.ICORunning);
+            }
+        } else {
+            assert(false);
+        }
 
         currentState = _nextState;
         StateChanged(currentState);

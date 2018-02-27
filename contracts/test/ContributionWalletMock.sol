@@ -1,12 +1,10 @@
 pragma solidity 0.4.19;
 
-import '../TLN.sol';
+import '../ContributionWallet.sol';
 
-// @dev TLNMock mocks current block number
+// @dev ContributionWalletMock mocks current block number
 
-contract TLNMock is TLN {
-
-    function TLNMock(address _tokenFactory) public TLN(_tokenFactory) {}
+contract ContributionWalletMock is ContributionWallet {
 
     function getBlockNumber() internal constant returns (uint) {
         return mock_blockNumber;
