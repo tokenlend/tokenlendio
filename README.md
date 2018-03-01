@@ -48,3 +48,8 @@ Sale:
 - [Bonuses.sol](/contracts/Bonuses.sol) - Contains bonus tiers data and sets current bonus tier according to specified conditions
 - [ContributionWallet.sol](/contracts/ContributionWallet.sol) - Holds Ether during the contribution period
 - [MultiSigWallet.sol](/contracts/MultiSigWallet.sol) - Multisignature wallet - allows multiple parties to agree on transaction before execution
+
+Testnet:
+
+- Example of a successful testnet sale: [TLN contribution](https://ropsten.etherscan.io/address/0x76dfcdc8d35c9ec1bca7a02288e9a32ef24f535f)
+- Testnet TLN Token: [TLN](https://ropsten.etherscan.io/token/0x76dfcdc8d35c9ec1bca7a02288e9a32ef24f535f)
